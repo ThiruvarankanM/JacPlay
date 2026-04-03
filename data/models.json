@@ -1,0 +1,289 @@
+{
+  "categories": [
+    {
+      "id": "flagship",
+      "name": "Flagship Models",
+      "description": "Best overall performance across all tasks",
+      "icon": "Sparkles"
+    },
+    {
+      "id": "reasoning",
+      "name": "Reasoning Models",
+      "description": "Deep logical thinking, math, and science",
+      "icon": "Brain"
+    },
+    {
+      "id": "coding",
+      "name": "Best Coding Models",
+      "description": "Optimized for code generation and debugging",
+      "icon": "Code2"
+    },
+    {
+      "id": "fast",
+      "name": "Fast & Affordable",
+      "description": "Low latency and cost-efficient for everyday use",
+      "icon": "Zap"
+    },
+    {
+      "id": "vision",
+      "name": "Vision Models",
+      "description": "Understand images, diagrams, and screenshots",
+      "icon": "Eye"
+    },
+    {
+      "id": "roleplay",
+      "name": "Roleplay & Creative",
+      "description": "Character play, storytelling, and creative writing",
+      "icon": "Drama"
+    }
+  ],
+  "models": [
+    {
+      "id": "gpt-4o",
+      "name": "GPT-4o",
+      "short_name": "GPT-4o",
+      "provider": "openai",
+      "provider_display": "OpenAI",
+      "categories": ["flagship", "coding", "vision"],
+      "description": "OpenAI's flagship multimodal model. Excellent at reasoning, coding, vision and complex tasks.",
+      "context_length": 128000,
+      "supports_vision": true,
+      "color": "#10a37f",
+      "avatar": "G"
+    },
+    {
+      "id": "gpt-4o-mini",
+      "name": "GPT-4o mini",
+      "short_name": "4o mini",
+      "provider": "openai",
+      "provider_display": "OpenAI",
+      "categories": ["fast"],
+      "description": "Small, fast and capable. Best value for everyday tasks from OpenAI.",
+      "context_length": 128000,
+      "supports_vision": true,
+      "color": "#10a37f",
+      "avatar": "G"
+    },
+    {
+      "id": "gpt-4.1",
+      "name": "GPT-4.1",
+      "short_name": "GPT-4.1",
+      "provider": "openai",
+      "provider_display": "OpenAI",
+      "categories": ["flagship", "coding"],
+      "description": "OpenAI's frontier model with a 1M token context window. Optimized for coding and instruction following.",
+      "context_length": 1047576,
+      "supports_vision": true,
+      "color": "#10a37f",
+      "avatar": "G"
+    },
+    {
+      "id": "o4-mini",
+      "name": "o4-mini",
+      "short_name": "o4-mini",
+      "provider": "openai",
+      "provider_display": "OpenAI",
+      "categories": ["reasoning", "coding"],
+      "description": "Fast and capable reasoning model from OpenAI. Strong at math, science, and complex logic.",
+      "context_length": 200000,
+      "supports_vision": false,
+      "color": "#10a37f",
+      "avatar": "o4"
+    },
+    {
+      "id": "o3-mini",
+      "name": "o3-mini",
+      "short_name": "o3-mini",
+      "provider": "openai",
+      "provider_display": "OpenAI",
+      "categories": ["reasoning"],
+      "description": "Cost-efficient reasoning model with strong STEM and logic capabilities.",
+      "context_length": 200000,
+      "supports_vision": false,
+      "color": "#10a37f",
+      "avatar": "o3"
+    },
+    {
+      "id": "claude-opus-4-6",
+      "name": "Claude Opus 4.6",
+      "short_name": "Opus 4.6",
+      "provider": "anthropic",
+      "provider_display": "Anthropic",
+      "categories": ["flagship", "coding", "vision"],
+      "description": "Anthropic's most intelligent model. Exceptional at nuanced analysis and complex long-context reasoning.",
+      "context_length": 200000,
+      "supports_vision": true,
+      "color": "#e07842",
+      "avatar": "C"
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6",
+      "short_name": "Sonnet 4.6",
+      "provider": "anthropic",
+      "provider_display": "Anthropic",
+      "categories": ["flagship", "coding", "reasoning", "vision"],
+      "description": "Ideal balance of intelligence and speed. Great at coding, writing, and nuanced analysis.",
+      "context_length": 200000,
+      "supports_vision": true,
+      "color": "#e07842",
+      "avatar": "C"
+    },
+    {
+      "id": "claude-haiku-4-5-20251001",
+      "name": "Claude Haiku 4.5",
+      "short_name": "Haiku 4.5",
+      "provider": "anthropic",
+      "provider_display": "Anthropic",
+      "categories": ["fast"],
+      "description": "Anthropic's fastest and most compact model. Perfect for high-throughput, low-latency tasks.",
+      "context_length": 200000,
+      "supports_vision": true,
+      "color": "#e07842",
+      "avatar": "C"
+    },
+    {
+      "id": "gemini-2.5-pro-preview",
+      "name": "Gemini 2.5 Pro",
+      "short_name": "Gemini 2.5 Pro",
+      "provider": "google",
+      "provider_display": "Google",
+      "categories": ["flagship", "coding", "vision"],
+      "description": "Google's most capable model with a 1M token context window. Excellent for complex tasks and vision.",
+      "context_length": 1000000,
+      "supports_vision": true,
+      "color": "#4285f4",
+      "avatar": "Ge"
+    },
+    {
+      "id": "gemini-2.5-flash-preview",
+      "name": "Gemini 2.5 Flash",
+      "short_name": "Flash 2.5",
+      "provider": "google",
+      "provider_display": "Google",
+      "categories": ["fast", "reasoning"],
+      "description": "Fast and capable multimodal model. Excellent price-performance ratio with long context.",
+      "context_length": 1000000,
+      "supports_vision": true,
+      "color": "#4285f4",
+      "avatar": "Gf"
+    },
+    {
+      "id": "gemini-2.0-flash-001",
+      "name": "Gemini 2.0 Flash",
+      "short_name": "Flash 2.0",
+      "provider": "google",
+      "provider_display": "Google",
+      "categories": ["fast", "vision"],
+      "description": "Google's efficient multimodal model with real-time capabilities and tool use.",
+      "context_length": 1000000,
+      "supports_vision": true,
+      "color": "#4285f4",
+      "avatar": "Gf"
+    },
+    {
+      "id": "deepseek-reasoner",
+      "name": "DeepSeek R1",
+      "short_name": "R1",
+      "provider": "deepseek",
+      "provider_display": "DeepSeek",
+      "categories": ["reasoning", "coding"],
+      "description": "Open-source reasoning model with visible chain-of-thought. Competitive with top closed models.",
+      "context_length": 64000,
+      "supports_vision": false,
+      "color": "#0ea5e9",
+      "avatar": "DR"
+    },
+    {
+      "id": "deepseek-chat",
+      "name": "DeepSeek V3",
+      "short_name": "V3",
+      "provider": "deepseek",
+      "provider_display": "DeepSeek",
+      "categories": ["flagship", "coding"],
+      "description": "DeepSeek's powerful open-source chat model. Strong coding and instruction following at low cost.",
+      "context_length": 64000,
+      "supports_vision": false,
+      "color": "#0ea5e9",
+      "avatar": "DV"
+    },
+    {
+      "id": "mistral-large-latest",
+      "name": "Mistral Large",
+      "short_name": "Mistral Large",
+      "provider": "mistral",
+      "provider_display": "Mistral AI",
+      "categories": ["flagship", "coding"],
+      "description": "Mistral's most capable model. Strong multilingual support and coding capabilities.",
+      "context_length": 131072,
+      "supports_vision": false,
+      "color": "#ff7000",
+      "avatar": "M"
+    },
+    {
+      "id": "mistral-small-latest",
+      "name": "Mistral Small",
+      "short_name": "Mistral Small",
+      "provider": "mistral",
+      "provider_display": "Mistral AI",
+      "categories": ["fast"],
+      "description": "Fast and efficient model from Mistral. Great for everyday tasks and batch processing.",
+      "context_length": 131072,
+      "supports_vision": false,
+      "color": "#ff7000",
+      "avatar": "Ms"
+    },
+    {
+      "id": "codestral-latest",
+      "name": "Codestral",
+      "short_name": "Codestral",
+      "provider": "mistral",
+      "provider_display": "Mistral AI",
+      "categories": ["coding"],
+      "description": "Mistral's dedicated code model. Trained on 80+ programming languages for precise generation.",
+      "context_length": 131072,
+      "supports_vision": false,
+      "color": "#ff7000",
+      "avatar": "Mc"
+    },
+    {
+      "id": "llama-3.3-70b-versatile",
+      "name": "Llama 3.3 70B",
+      "short_name": "Llama 3.3",
+      "provider": "groq",
+      "provider_display": "Groq",
+      "categories": ["fast", "flagship"],
+      "description": "Meta's 70B open-source model served at blazing speed via Groq's LPU inference.",
+      "context_length": 131072,
+      "supports_vision": false,
+      "color": "#f97316",
+      "avatar": "L"
+    },
+    {
+      "id": "llama-3.1-8b-instant",
+      "name": "Llama 3.1 8B",
+      "short_name": "Llama 8B",
+      "provider": "groq",
+      "provider_display": "Groq",
+      "categories": ["fast"],
+      "description": "Ultra-fast 8B model via Groq. Ideal for real-time applications and lightweight tasks.",
+      "context_length": 131072,
+      "supports_vision": false,
+      "color": "#f97316",
+      "avatar": "L"
+    },
+    {
+      "id": "command-r-plus",
+      "name": "Command R+",
+      "short_name": "Command R+",
+      "provider": "cohere",
+      "provider_display": "Cohere",
+      "categories": ["flagship", "roleplay"],
+      "description": "Cohere's most capable model. Excellent at RAG, tool use, and long-form generation.",
+      "context_length": 128000,
+      "supports_vision": false,
+      "color": "#39594d",
+      "avatar": "Co"
+    }
+  ]
+}

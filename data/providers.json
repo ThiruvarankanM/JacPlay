@@ -1,0 +1,79 @@
+[
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "description": "GPT-4o, o4-mini, o3, GPT-4.1 and more",
+    "base_url": "https://api.openai.com/v1/chat/completions",
+    "key_placeholder": "sk-proj-...",
+    "key_help_text": "Get your key at platform.openai.com/api-keys",
+    "key_help_url": "https://platform.openai.com/api-keys",
+    "api_type": "openai_compatible",
+    "color": "#10a37f"
+  },
+  {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "description": "Claude Opus 4.6, Sonnet 4.6, Haiku 4.5",
+    "base_url": "https://api.anthropic.com/v1/messages",
+    "key_placeholder": "sk-ant-api03-...",
+    "key_help_text": "Get your key at console.anthropic.com/settings/keys",
+    "key_help_url": "https://console.anthropic.com/settings/keys",
+    "api_type": "anthropic",
+    "color": "#e07842"
+  },
+  {
+    "id": "google",
+    "name": "Google AI",
+    "description": "Gemini 2.5 Pro, Flash, and experimental models",
+    "base_url": "https://generativelanguage.googleapis.com/v1beta",
+    "key_placeholder": "AIzaSy...",
+    "key_help_text": "Free key at aistudio.google.com/app/apikey",
+    "key_help_url": "https://aistudio.google.com/app/apikey",
+    "api_type": "google",
+    "color": "#4285f4"
+  },
+  {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "description": "DeepSeek R1 (reasoning) and V3 (chat)",
+    "base_url": "https://api.deepseek.com/v1/chat/completions",
+    "key_placeholder": "sk-...",
+    "key_help_text": "Get your key at platform.deepseek.com/api_keys",
+    "key_help_url": "https://platform.deepseek.com/api_keys",
+    "api_type": "openai_compatible",
+    "color": "#0ea5e9"
+  },
+  {
+    "id": "mistral",
+    "name": "Mistral AI",
+    "description": "Mistral Large, Small, Codestral and more",
+    "base_url": "https://api.mistral.ai/v1/chat/completions",
+    "key_placeholder": "...",
+    "key_help_text": "Get your key at console.mistral.ai/api-keys",
+    "key_help_url": "https://console.mistral.ai/api-keys",
+    "api_type": "openai_compatible",
+    "color": "#ff7000"
+  },
+  {
+    "id": "groq",
+    "name": "Groq",
+    "description": "Llama 3.3, Gemma 2 at blazing fast inference speed",
+    "base_url": "https://api.groq.com/openai/v1/chat/completions",
+    "key_placeholder": "gsk_...",
+    "key_help_text": "Free key at console.groq.com/keys",
+    "key_help_url": "https://console.groq.com/keys",
+    "api_type": "openai_compatible",
+    "color": "#f97316"
+  },
+  {
+    "id": "cohere",
+    "name": "Cohere",
+    "description": "Command R+ and Command R models",
+    "base_url": "https://api.cohere.com/compatibility/v1/chat/completions",
+    "key_placeholder": "...",
+    "key_help_text": "Free key at dashboard.cohere.com/api-keys",
+    "key_help_url": "https://dashboard.cohere.com/api-keys",
+    "api_type": "openai_compatible",
+    "color": "#39594d"
+  }
+]

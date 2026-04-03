@@ -1,0 +1,53 @@
+[project]
+name = "jacplay"
+version = "1.0.0"
+description = "JacPlay — Play with any AI model. Built on the Jaseci stack."
+entry-point = "main.jac"
+authors = ["JacPlay Contributors"]
+license = "MIT"
+
+[serve]
+base_route_app = "app"
+
+[plugins.client.app_meta_data]
+title = "JacPlay — AI Model Playground"
+description = "Chat with any AI model — GPT-4o, Claude, Gemini, Llama, DeepSeek and more. Compare models side by side. Built on the Jaseci stack."
+keywords = "ai, chat, playground, gpt, claude, gemini, llama, deepseek, mistral, jaseci, jac"
+author = "JacPlay"
+theme_color = "#7c3aed"
+og_type = "website"
+og_title = "JacPlay — AI Model Playground"
+og_description = "Chat with any AI model. Compare side-by-side. Bring your own API key."
+
+[plugins.client.vite]
+plugins = ["tailwindcss()"]
+lib_imports = ["import tailwindcss from '@tailwindcss/vite'"]
+
+[dependencies]
+jaclang = ">=0.12.0"
+requests = ">=2.32.0"
+
+[dependencies.npm]
+tailwindcss = "latest"
+lucide-react = "^0.468.0"
+clsx = "^2.1.1"
+tailwind-merge = "^3.0.0"
+marked = "^14.0.0"
+react = "^18.2.0"
+react-dom = "^18.2.0"
+react-router-dom = "^6.22.0"
+react-error-boundary = "^5.0.0"
+react-hook-form = "^7.71.0"
+zod = "^4.3.6"
+"@hookform/resolvers" = "^5.2.2"
+
+[dependencies.npm.dev]
+"@tailwindcss/vite" = "^4.1.17"
+vite = "^6.4.1"
+"@vitejs/plugin-react" = "^4.2.1"
+typescript = "^5.3.3"
+"@types/react" = "^18.2.0"
+"@types/react-dom" = "^18.2.0"
+
+[dev-dependencies]
+watchdog = ">=3.0.0"
