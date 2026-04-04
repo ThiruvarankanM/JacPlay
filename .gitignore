@@ -1,0 +1,30 @@
+.jac-ide/
+export-*.jacpack
+.jac/
+__jac_gen__/
+node_modules/
+dist/
+__pycache__/
+.env
+.jac-preview.log
+.jac-ide-bashrc
+.venv
+
+# macOS
+.DS_Store
+
+# Python cache and test artifacts
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local environment files
+.env.*
+!.env.example
+

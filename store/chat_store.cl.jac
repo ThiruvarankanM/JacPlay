@@ -9,6 +9,7 @@ def:pub ChatProvider(props: Any) -> JsxElement {
     has activeTabId: str = "";     # currently visible tab
     has systemPrompt: str = "";    # shared system prompt
     has inputText: str = "";       # current message draft
+    has useFunctionApi: bool = False;  # runtime compatibility switch for API routing
 
     # Ref always points to the latest sessions — used inside async callbacks
     # to avoid stale closure where `sessions` reads the render-time snapshot.
@@ -120,20 +121,58 @@ def:pub ChatProvider(props: Any) -> JsxElement {
 
             sessId = sess["id"];
 
-            async def _doFetch -> None {
-                startTime = int(Date.now());
+            async def _requestChat(reqBody: Any) -> Any {
+                if useFunctionApi {
+                    fnResp = await fetch("/function/api_chat", {
+                        "method": "POST",
+                        "headers": {"Content-Type": "application/json"},
+                        "body": JSON.stringify(reqBody)
+                    });
+                    return await fnResp.json();
+                }
+
                 respObj = await fetch("/api/chat", {
                     "method": "POST",
                     "headers": {"Content-Type": "application/json"},
-                    "body": JSON.stringify({
-                        "model_id": model["id"],
-                        "messages": msgList,
-                        "api_key": apiKey,
-                        "provider": provider,
-                        "system_prompt": ""
-                    })
+                    "body": JSON.stringify(reqBody)
                 });
-                respJson = await respObj.json();
+
+                statusCode = int(respObj["status"] or 0);
+                if statusCode == 404 {
+                    useFunctionApi = True;
+                    fnResp = await fetch("/function/api_chat", {
+                        "method": "POST",
+                        "headers": {"Content-Type": "application/json"},
+                        "body": JSON.stringify(reqBody)
+                    });
+                    return await fnResp.json();
+                }
+
+                contentType = str(respObj["headers"].get("content-type") or "").toLowerCase();
+                if contentType.indexOf("application/json") >= 0 {
+                    return await respObj.json();
+                }
+
+                # Jac runtime fallback: switch once, then keep using function route.
+                useFunctionApi = True;
+                fnResp = await fetch("/function/api_chat", {
+                    "method": "POST",
+                    "headers": {"Content-Type": "application/json"},
+                    "body": JSON.stringify(reqBody)
+                });
+                return await fnResp.json();
+            }
+
+            async def _doFetch -> None {
+                startTime = int(Date.now());
+                reqBody = {
+                    "model_id": model["id"],
+                    "messages": msgList,
+                    "api_key": apiKey,
+                    "provider": provider,
+                    "system_prompt": ""
+                };
+                respJson = await _requestChat(reqBody);
                 result = respJson["data"] and respJson["data"]["result"] or respJson["data"] or respJson;
 
                 elapsed = int(Date.now()) - startTime;

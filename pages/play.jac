@@ -342,16 +342,40 @@ cl {
         def loadCatalog -> None {
             if catalogLoaded { return; }
             async def _fetch -> None {
+                payloadObj = None;
+
+                # Prefer REST route when available.
                 resp = await fetch("/api/models");
-                data = await resp.json();
-                if data and data["ok"] {
-                    inner = data["data"] and data["data"]["result"] or None;
-                    if inner and inner["ok"] {
-                        catalogModels = inner["data"] and inner["data"]["models"] or [];
-                        catalogCategories = inner["data"] and inner["data"]["categories"] or [];
-                        catalogLoaded = True;
+                statusCode = int(resp["status"] or 0);
+                contentType = str(resp["headers"].get("content-type") or "").toLowerCase();
+                if statusCode != 404 and contentType.indexOf("application/json") >= 0 {
+                    data = await resp.json();
+                    root = data or {};
+                    payloadObj = root;
+                    if payloadObj["data"] { payloadObj = payloadObj["data"]; }
+                    if payloadObj and payloadObj["result"] { payloadObj = payloadObj["result"]; }
+                    if payloadObj and payloadObj["data"] and (payloadObj["data"]["models"] or payloadObj["data"]["categories"]) {
+                        payloadObj = payloadObj["data"];
                     }
                 }
+
+                # Fallback for Jac runtimes that expose function routes instead of /api/*.
+                if not payloadObj or not payloadObj["models"] {
+                    fnResp = await fetch("/function/api_get_models", {
+                        "method": "POST",
+                        "headers": {"Content-Type": "application/json"},
+                        "body": "{}"
+                    });
+                    fnData = await fnResp.json();
+                    payloadObj = fnData and fnData["data"] and fnData["data"]["result"] or None;
+                    if payloadObj and payloadObj["data"] and payloadObj["ok"] {
+                        payloadObj = payloadObj["data"];
+                    }
+                }
+
+                catalogModels = payloadObj and payloadObj["models"] or [];
+                catalogCategories = payloadObj and payloadObj["categories"] or [];
+                catalogLoaded = True;
             }
             _fetch();
         }
