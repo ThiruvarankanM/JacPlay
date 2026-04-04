@@ -1,9 +1,7 @@
-"""API key components — QuickKeyPrompt (per-model) + ApiKeyModal (manage all)."""
-
-cl import from "lucide-react" { X, Key, ExternalLink, Eye, EyeOff, Check, Trash2, ShieldCheck, AlertCircle }
-cl import from .ui.button { Button }
-cl import from .ui.utils { cn }
-cl import from ..store.app_store { useAppStore }
+cl import from "lucide-react" { Key, X, Eye, EyeOff, Trash2, ShieldCheck, ExternalLink, Check, AlertCircle }
+import from .ui.button { Button }
+import from .ui.utils { cn }
+import from ..store.app_store { useAppStore }
 
 cl {
     def:pub QuickKeyPrompt(props: Any) -> JsxElement {
@@ -18,16 +16,20 @@ cl {
         has showKey: bool = False;
         has saving: bool = False;
         has error: str = "";
+        has success: str = "";
 
-        def handleSave -> None {
+        async def handleSave -> None {
             key = inputVal.trim();
             if not key {
-                error = "Please enter a valid API key.";
+                error = "Please enter an API key.";
+                success = "";
                 return;
             }
             saving = True;
             error = "";
-            store.setApiKey(provider["id"], key);
+            success = "Saving key...";
+            store["setApiKey"](provider["id"], key);
+            success = provider["name"] + " API key saved.";
             saving = False;
             onSaved();
         }
@@ -72,12 +74,13 @@ cl {
                         <input
                             type={showKey and "text" or "password"}
                             value={inputVal}
-                            onChange={lambda(e: Any) -> None { inputVal = str(e["target"]["value"]); error = ""; }}
+                            onChange={lambda(e: Any) -> None { inputVal = str(e["target"]["value"]); error = ""; success = ""; }}
                             onKeyDown={handleKeyDown}
                             placeholder={provider["key_placeholder"] or "Paste your API key here"}
                             className={cn(
                                 "w-full h-10 rounded-xl border bg-input px-4 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors font-mono",
-                                error and "border-destructive" or "border-border"
+                                error and "border-destructive" or "border-border",
+                                success and not error and "border-emerald-500"
                             )}
                             autoFocus={True}
                         />
@@ -94,6 +97,13 @@ cl {
                         <div className="flex items-center gap-1.5 text-xs text-destructive">
                             <AlertCircle size={12}/>
                             {error}
+                        </div>
+                    }
+
+                    {success and not error and
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                            <Check size={12}/>
+                            {success}
                         </div>
                     }
 
@@ -136,26 +146,76 @@ cl {
         </div>;
     }
 
-
     def ProviderKeyRow(props: Any) -> JsxElement {
         provider = props.provider;
-        hasKey = props.hasKey;
+        keyValue = props.keyValue or "";
         onSave = props.onSave;
         onRemove = props.onRemove;
+
+        hasKey = bool(keyValue.trim());
 
         has editing: bool = not hasKey;
         has inputVal: str = "";
         has showKey: bool = False;
         has saved: bool = False;
+        has saving: bool = False;
+        has error: str = "";
+        has success: str = "";
 
-        def handleSave -> None {
+        can with [hasKey] entry {
+            if not hasKey {
+                editing = True;
+                inputVal = "";
+                error = "";
+                success = "";
+            } elif not editing {
+                inputVal = "";
+            }
+        }
+
+        async def handleSave -> None {
             key = inputVal.trim();
-            if not key { return; }
+            if not key {
+                error = "Please enter an API key.";
+                success = "";
+                return;
+            }
+            saving = True;
+            error = "";
+            success = "Saving key...";
             onSave(provider["id"], key);
             saved = True;
             editing = False;
             inputVal = "";
-            setTimeout(lambda() -> None { saved = False; }, 2000);
+            error = "";
+            success = provider["name"] + " key saved.";
+            setTimeout(lambda() -> None { saved = False; success = ""; }, 2000);
+            saving = False;
+        }
+
+        def handleRemove -> None {
+            onRemove(provider["id"]);
+            editing = True;
+            inputVal = "";
+            showKey = False;
+            saved = False;
+            success = "";
+            error = "";
+        }
+
+        def handleEdit -> None {
+            editing = True;
+            inputVal = "";
+            error = "";
+            success = "";
+        }
+
+        def handleCancelEdit -> None {
+            editing = False;
+            inputVal = "";
+            showKey = False;
+            error = "";
+            success = "";
         }
 
         def handleKeyDown(e: Any) -> None {
@@ -186,6 +246,13 @@ cl {
                 }
             </div>
 
+            {success and not editing and
+                <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                    <Check size={12}/>
+                    {success}
+                </div>
+            }
+
             {editing and
                 <div className="space-y-2">
                     <div className="flex gap-2">
@@ -193,10 +260,14 @@ cl {
                             <input
                                 type={showKey and "text" or "password"}
                                 value={inputVal}
-                                onChange={lambda(e: Any) -> None { inputVal = str(e["target"]["value"]); }}
+                                onChange={lambda(e: Any) -> None { inputVal = str(e["target"]["value"]); error = ""; success = ""; }}
                                 onKeyDown={handleKeyDown}
                                 placeholder={provider["key_placeholder"]}
-                                className="w-full h-9 rounded-lg border border-border bg-input px-3 pr-8 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors font-mono"
+                                className={cn(
+                                    "w-full h-9 rounded-lg border bg-input px-3 pr-8 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors font-mono",
+                                    error and "border-destructive" or "border-border",
+                                    success and not error and "border-emerald-500"
+                                )}
                                 autoFocus={not hasKey}
                             />
                             <button
@@ -207,15 +278,31 @@ cl {
                                 {showKey and <EyeOff size={12}/> or <Eye size={12}/>}
                             </button>
                         </div>
-                        <Button size="sm" onClick={handleSave} disabled={not inputVal.trim()}>
-                            {saved and <Check size={13}/> or "Save"}
+                        <Button size="sm" onClick={handleSave} disabled={not inputVal.trim() or saving}>
+                            {saving and <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin"/>}
+                            {not saving and (saved and <Check size={13}/> or "Save")}
                         </Button>
                         {hasKey and
-                            <Button variant="ghost" size="icon-sm" onClick={lambda() -> None { editing = False; }}>
+                            <Button variant="ghost" size="icon-sm" onClick={handleCancelEdit}>
                                 <X size={13}/>
                             </Button>
                         }
                     </div>
+
+                    {error and
+                        <div className="flex items-center gap-1.5 text-xs text-destructive">
+                            <AlertCircle size={12}/>
+                            {error}
+                        </div>
+                    }
+
+                    {success and not error and
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                            <Check size={12}/>
+                            {success}
+                        </div>
+                    }
+
                     <a
                         href={provider["key_help_url"]}
                         target="_blank"
@@ -234,13 +321,13 @@ cl {
                         {"••••••••••••••••••••"}
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
-                        <Button variant="outline" size="sm" onClick={lambda() -> None { editing = True; }}>
-                            {"Change"}
+                        <Button variant="outline" size="sm" onClick={handleEdit}>
+                            {"Edit"}
                         </Button>
                         <Button
                             variant="destructive"
                             size="icon-sm"
-                            onClick={lambda() -> None { onRemove(provider["id"]); }}
+                            onClick={handleRemove}
                             title="Remove key"
                         >
                             <Trash2 size={12}/>
@@ -250,7 +337,6 @@ cl {
             }
         </div>;
     }
-
 
     def:pub ApiKeyModal(props: Any) -> JsxElement {
         onClose = props.onClose;
@@ -277,15 +363,13 @@ cl {
                 </div>
 
                 <div className="overflow-y-auto flex-1 p-4 space-y-3">
-                    {providers.map(lambda(p: Any) -> JsxElement {
-                        return <ProviderKeyRow
-                            key={p["id"]}
-                            provider={p}
-                            hasKey={store.hasKey(p["id"])}
-                            onSave={store.setApiKey}
-                            onRemove={store.removeApiKey}
-                        />;
-                    })}
+                    {[<ProviderKeyRow
+                        key={p["id"]}
+                        provider={p}
+                        keyValue={store["getKey"](p["id"])}
+                        onSave={store["setApiKey"]}
+                        onRemove={store["removeApiKey"]}
+                    /> for p in providers]}
                 </div>
 
                 <div className="px-6 py-3 border-t border-border bg-muted/20 rounded-b-2xl flex-shrink-0">

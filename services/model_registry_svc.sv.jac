@@ -1,8 +1,9 @@
-"""Model registry — static catalog, no graph dependency.
-
+"""
 Returns the full model list directly without graph operations so it works
 reliably on any fresh clone without needing a seeded graph database.
 """
+
+import from .provider_catalog { get_providers }
 
 glob _CATEGORIES: list[dict] = [
     {"id": "flagship",  "name": "Flagship Models",       "description": "Best overall performance across all tasks"},
@@ -47,18 +48,6 @@ def:pub get_all_models() -> list[dict] {
 
 def:pub get_categories() -> list[dict] {
     return _CATEGORIES;
-}
-
-def:pub get_providers() -> list[dict] {
-    seen: list[str] = [];
-    result: list[dict] = [];
-    for m in _MODELS {
-        if m["provider"] not in seen {
-            seen.append(m["provider"]);
-            result.append({"id": m["provider"], "name": m["provider_display"]});
-        }
-    }
-    return result;
 }
 
 def:pub search_models(query: str = "", category: str = "", provider: str = "") -> list[dict] {

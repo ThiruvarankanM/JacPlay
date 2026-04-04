@@ -1,217 +1,287 @@
-"""JacPlay — Landing / home page."""
-
-cl import from "@jac/runtime" { Link }
 cl import from "lucide-react" {
-    Sparkles, ArrowRight, Play, Zap, Brain, Code2, Eye,
-    Shield, Cpu, Globe, GitCompare
+    ArrowRight, Bot, KeyRound, Layers3, Sparkles, ShieldCheck, Wand2,
+    Sun, Moon, Github, ChevronRight, Key, CheckCircle2
 }
+cl import from ..store.app_store { useAppStore }
+cl import from ..hooks.provider_catalog { useProviderCatalog }
+cl import from ..components.api_key_modal { ApiKeyModal }
+cl import from ..components.ui.button { Button }
 
 cl {
-    def ModelCategoryCard(props: Any) -> JsxElement {
+    def HeaderAction(props: Any) -> JsxElement {
         icon = props.icon;
-        title = props.title;
-        desc = props.desc;
-        models = props.models;
+        label = props.label;
+        onClick = props.onClick;
+        badge = props.badge;
 
-        return <div className="group bg-card border border-border rounded-xl p-5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-3 group-hover:bg-primary/15 transition-colors">
-                {icon}
-            </div>
-            <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed mb-3">{desc}</p>
-            <div className="flex flex-wrap gap-1.5">
-                {models.map(lambda(m: Any) -> JsxElement {
-                    return <span
-                        key={m}
-                        className="text-xs bg-muted text-muted-foreground rounded-full px-2 py-0.5"
-                    >{m}</span>;
-                })}
-            </div>
-        </div>;
+        return <button
+            onClick={onClick}
+            className="group inline-flex items-center gap-2 rounded-2xl border border-border/70 bg-background/70 px-4 py-2.5 text-sm font-medium text-muted-foreground backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card hover:text-foreground"
+        >
+            <span className="text-primary/80 group-hover:text-primary">{icon}</span>
+            <span>{label}</span>
+            {badge and
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                    {badge}
+                </span>
+            }
+        </button>;
     }
 
-    def FeatureRow(props: Any) -> JsxElement {
-        icon = props.icon;
-        title = props.title;
-        desc = props.desc;
-        return <div className="flex gap-4 items-start">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0 mt-0.5">
-                {icon}
-            </div>
-            <div>
-                <h4 className="text-sm font-semibold text-foreground mb-1">{title}</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
-            </div>
+    def ThemeToggle(props: Any) -> JsxElement {
+        isDark = props.isDark;
+        onToggle = props.onToggle;
+
+        return <button
+            onClick={onToggle}
+            className="inline-flex items-center gap-2 rounded-2xl border border-border/70 bg-background/70 px-4 py-2.5 text-sm font-medium text-muted-foreground backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-card hover:text-foreground"
+            title={isDark and "Switch to light mode" or "Switch to dark mode"}
+        >
+            <span className="text-primary/80">{isDark and <Sun size={17}/> or <Moon size={17}/>}</span>
+            <span>{isDark and "Light mode" or "Dark mode"}</span>
+        </button>;
+    }
+
+    def KeySummary(props: Any) -> JsxElement {
+        count = props.count;
+        return <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 size={13}/>
+            <span>{str(count) + " key" + (count != 1 and "s" or "") + " ready"}</span>
         </div>;
     }
 
     def:pub page -> JsxElement {
-        return <div className="bg-background">
+        appStore = useAppStore();
+        providerCatalog = useProviderCatalog();
 
-            <section className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-grid-pattern opacity-50"/>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[140px] pointer-events-none"/>
+        has showKeys: bool = False;
 
-                <div className="relative max-w-4xl mx-auto px-5 pt-24 pb-20 text-center">
-                    <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-8">
-                        <Sparkles size={12} className="text-primary"/>
-                        <span className="text-xs font-medium text-primary">{"200+ Models · Built on Jaseci · Open Source"}</span>
-                    </div>
+        def openKeys -> None {
+            showKeys = True;
+        }
 
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-5 leading-[1.1]">
-                        {"Play with any "}
-                        <span className="text-primary">{"AI Model"}</span>
-                        <br/>
-                        {"you want"}
-                    </h1>
+        def closeKeys -> None {
+            showKeys = False;
+        }
 
-                    <p className="text-base text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-                        {"Chat with GPT-4o, Claude, Gemini, Llama, DeepSeek and 200+ more. Compare models side by side. Bring your own API key — we never store it."}
-                    </p>
+        def openGithub -> None {
+            window.open("https://github.com", "_blank", "noopener,noreferrer");
+        }
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link
-                            to="/play"
-                            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-7 py-3 rounded-xl transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02]"
-                        >
-                            <Play size={15} className="fill-current"/>
-                            {"Start Playing"}
-                            <ArrowRight size={15}/>
-                        </Link>
-                        <a
-                            href="https://aistudio.google.com/app/apikey"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 bg-muted hover:bg-accent border border-border hover:border-primary/30 text-foreground font-semibold px-7 py-3 rounded-xl transition-all"
-                        >
-                            <Zap size={15}/>
-                            {"Get a Free API Key"}
-                        </a>
-                    </div>
+        savedKeyCount = Object.keys(appStore["apiKeys"] or {}).filter(
+            lambda(key: Any) -> bool { return bool((appStore["apiKeys"][key] or "").trim()); }
+        ).length;
 
-                    <p className="mt-4 text-xs text-muted-foreground">
-                        {"Free models available · No signup required · 100% open source"}
-                    </p>
-                </div>
-            </section>
+        return <div className="min-h-screen bg-background text-foreground">
+            <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/8 via-background to-background">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.18),transparent_38%)]" />
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
-            <section className="max-w-5xl mx-auto px-5 py-20">
-                <div className="text-center mb-12">
-                    <h2 className="text-2xl font-bold text-foreground mb-3">{"Every type of model, in one place"}</h2>
-                    <p className="text-sm text-muted-foreground">{"Use your own keys — direct to each provider, no middleman"}</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <ModelCategoryCard
-                        icon={<Sparkles size={16}/>}
-                        title="Flagship Models"
-                        desc="Best overall performance across writing, coding, reasoning and vision."
-                        models={["GPT-4o", "Claude Opus", "Gemini 2.5 Pro"]}
-                    />
-                    <ModelCategoryCard
-                        icon={<Brain size={16}/>}
-                        title="Reasoning Models"
-                        desc="Extended chain-of-thought for math, science and complex logic."
-                        models={["o4-mini", "DeepSeek R1", "Flash Thinking"]}
-                    />
-                    <ModelCategoryCard
-                        icon={<Code2 size={16}/>}
-                        title="Coding Models"
-                        desc="Optimized for code generation, debugging and architecture."
-                        models={["Claude Sonnet", "GPT-4.1", "Qwen Coder"]}
-                    />
-                    <ModelCategoryCard
-                        icon={<Zap size={16}/>}
-                        title="Fast and Affordable"
-                        desc="Low latency and low cost for high-volume everyday tasks."
-                        models={["GPT-4o mini", "Haiku 4.5", "Llama 3.3"]}
-                    />
-                    <ModelCategoryCard
-                        icon={<Eye size={16}/>}
-                        title="Vision Models"
-                        desc="Understand images, diagrams, screenshots and documents."
-                        models={["GPT-4o", "Gemini Flash", "Claude Sonnet"]}
-                    />
-                    <ModelCategoryCard
-                        icon={<GitCompare size={16}/>}
-                        title="Side-by-Side Compare"
-                        desc="Run the same prompt across multiple models simultaneously."
-                        models={["Any model", "Parallel responses", "Easy diff"]}
-                    />
-                </div>
-            </section>
-
-            <section className="bg-card border-t border-b border-border py-20">
-                <div className="max-w-4xl mx-auto px-5">
-                    <div className="text-center mb-12">
-                        <h2 className="text-2xl font-bold text-foreground mb-3">{"Everything you need for serious AI work"}</h2>
-                        <p className="text-sm text-muted-foreground">{"Production-ready playground, not a toy"}</p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                        <FeatureRow
-                            icon={<Shield size={16}/>}
-                            title="Your keys, your control"
-                            desc="API keys stay in your browser (localStorage). They are never sent to our servers — only directly to the provider."
-                        />
-                        <FeatureRow
-                            icon={<GitCompare size={16}/>}
-                            title="Multi-model comparison"
-                            desc="Add multiple model tabs and send the same message to all of them simultaneously. See who answers best."
-                        />
-                        <FeatureRow
-                            icon={<Cpu size={16}/>}
-                            title="System prompt control"
-                            desc="Set a shared system prompt that applies to all active model sessions. Fine-tune behavior and persona."
-                        />
-                        <FeatureRow
-                            icon={<Globe size={16}/>}
-                            title="Direct to every provider"
-                            desc="Use your own key for OpenAI, Anthropic, Google, DeepSeek, Mistral, Groq and more. No middleman, no markup."
-                        />
-                        <FeatureRow
-                            icon={<Zap size={16}/>}
-                            title="Built on the Jaseci stack"
-                            desc="100% pure JAC — frontend, backend, and routing in one unified language. Open source and self-hostable."
-                        />
-                        <FeatureRow
-                            icon={<Brain size={16}/>}
-                            title="Rich markdown rendering"
-                            desc="Responses with code blocks, tables, and formatting render beautifully with syntax highlighting."
-                        />
-                    </div>
-                </div>
-            </section>
-
-            <section className="max-w-3xl mx-auto px-5 py-24 text-center">
-                <h2 className="text-3xl font-bold text-foreground mb-4">{"Ready to explore the AI landscape?"}</h2>
-                <p className="text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed">
-                    {"Pick a model, paste your API key, and start chatting. Free models available with no key required."}
-                </p>
-                <Link
-                    to="/play"
-                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40"
-                >
-                    <Play size={16} className="fill-current"/>
-                    {"Open the Playground"}
-                    <ArrowRight size={16}/>
-                </Link>
-            </section>
-
-            <footer className="border-t border-border py-8">
-                <div className="max-w-5xl mx-auto px-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
-                            <Play size={9} className="text-primary-foreground fill-primary-foreground"/>
+                <div className="relative mx-auto max-w-7xl px-6 pb-16 pt-6 lg:px-10 lg:pb-20">
+                    <div className="mb-14 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
+                                <Sparkles size={20} />
+                            </div>
+                            <div>
+                                <p className="text-lg font-black tracking-tight text-foreground">{"JacPlay"}</p>
+                                <p className="text-sm text-muted-foreground">{"AI playground built the Jac + Jaseci way"}</p>
+                            </div>
                         </div>
-                        <span>{"JacPlay — Built with "}</span>
-                        <a href="https://jaseci.org" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition-colors font-medium">{"Jac"}</a>
-                        <span>{" by the community"}</span>
+
+                        <div className="flex flex-wrap items-center gap-3">
+                            <HeaderAction
+                                icon={<Key size={17}/>}
+                                label={"Keys"}
+                                badge={savedKeyCount > 0 and str(savedKeyCount) or ""}
+                                onClick={openKeys}
+                            />
+                            <HeaderAction
+                                icon={<Github size={17}/>}
+                                label={"GitHub"}
+                                onClick={openGithub}
+                            />
+                            <ThemeToggle
+                                isDark={appStore["isDark"]}
+                                onToggle={appStore["toggleTheme"]}
+                            />
+                        </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <a href="https://github.com/jaseci-labs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{"GitHub"}</a>
-                        <a href="https://jaseci.org" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{"Jaseci"}</a>
+
+                    <div className="grid items-center gap-14 lg:grid-cols-[1.08fr_0.92fr]">
+                        <div className="max-w-2xl">
+                            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                <Sparkles size={14} />
+                                <span>{"Built with Jac + Jaseci"}</span>
+                            </div>
+
+                            <h1 className="text-5xl font-black tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+                                {"Compare AI models with a proper playground UI"}
+                            </h1>
+                            <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground sm:text-xl">
+                                {"Open multiple LLMs side by side, manage provider keys cleanly, switch between light and dark mode, and test prompts in one polished Jac-native workspace."}
+                            </p>
+
+                            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                                <a href="/play" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:translate-y-[-1px] hover:bg-primary/90">
+                                    <span>{"Open Playground"}</span>
+                                    <ArrowRight size={16} />
+                                </a>
+                                <Button variant="outline" size="lg" onClick={openKeys} className="rounded-2xl">
+                                    <KeyRound size={16}/>
+                                    {"Manage API keys"}
+                                </Button>
+                            </div>
+
+                            <div className="mt-6 flex flex-wrap items-center gap-3">
+                                <KeySummary count={savedKeyCount}/>
+                                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+                                    {appStore["isDark"] and <Moon size={12}/> or <Sun size={12}/>}
+                                    <span>{appStore["isDark"] and "Dark mode enabled" or "Light mode enabled"}</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-10 grid max-w-xl grid-cols-3 gap-3">
+                                <div className="rounded-2xl border border-border bg-card/80 px-4 py-4 shadow-sm backdrop-blur">
+                                    <div className="text-2xl font-black text-foreground">{"19+"}</div>
+                                    <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{"Models"}</div>
+                                </div>
+                                <div className="rounded-2xl border border-border bg-card/80 px-4 py-4 shadow-sm backdrop-blur">
+                                    <div className="text-2xl font-black text-foreground">{"5+"}</div>
+                                    <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{"Providers"}</div>
+                                </div>
+                                <div className="rounded-2xl border border-border bg-card/80 px-4 py-4 shadow-sm backdrop-blur">
+                                    <div className="text-2xl font-black text-foreground">{"Side-by-side"}</div>
+                                    <div className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{"Mode"}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            <div className="rounded-[28px] border border-border bg-card/90 p-5 shadow-2xl shadow-primary/10 backdrop-blur">
+                                <div className="mb-4 flex items-center justify-between border-b border-border pb-4">
+                                    <div>
+                                        <p className="text-sm font-semibold text-foreground">{"Live playground preview"}</p>
+                                        <p className="text-xs text-muted-foreground">{"Keys, theme, and model compare all in one place"}</p>
+                                    </div>
+                                    <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        {"Ready"}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="rounded-2xl border border-border bg-background p-4">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                                    <Key size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-foreground">{"Keys panel"}</p>
+                                                    <p className="text-xs text-muted-foreground">{"Add, change, or remove provider keys"}</p>
+                                                </div>
+                                            </div>
+                                            <ChevronRight size={16} className="text-muted-foreground"/>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div className="rounded-2xl border border-border bg-background p-4">
+                                            <div className="mb-3 flex items-center gap-3">
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                                    <Bot size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-foreground">{"GPT-4o"}</p>
+                                                    <p className="text-xs text-muted-foreground">{"Fast reasoning"}</p>
+                                                </div>
+                                            </div>
+                                            <div className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+                                                {"Summarize this architecture and suggest improvements."}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-border bg-background p-4">
+                                            <div className="mb-3 flex items-center gap-3">
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-600">
+                                                    <Bot size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-foreground">{"Claude 3.5"}</p>
+                                                    <p className="text-xs text-muted-foreground">{"Long-form analysis"}</p>
+                                                </div>
+                                            </div>
+                                            <div className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+                                                {"Here’s a structured review with tradeoffs and next steps."}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                                <ShieldCheck size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-foreground">{"Provider-aware key handling"}</p>
+                                                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                    {"Click the Keys button anytime to add, update, or remove API keys without leaving the homepage."}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </footer>
+            </section>
+
+            <section id="features" className="mx-auto max-w-7xl px-6 py-20 lg:px-10">
+                <div className="mb-10 max-w-2xl">
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">{"Why JacPlay"}</p>
+                    <h2 className="mt-3 text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+                        {"A polished Jac homepage with the controls you wanted"}
+                    </h2>
+                    <p className="mt-4 text-base leading-7 text-muted-foreground">
+                        {"The landing page now includes direct key management, theme switching, and a cleaner product-style header while keeping the main focus on opening the playground fast."}
+                    </p>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-3">
+                    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+                        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <Layers3 size={18} />
+                        </div>
+                        <h3 className="text-lg font-bold text-foreground">{"Multi-model compare"}</h3>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{"Open multiple model sessions side by side and compare responses in one workspace."}</p>
+                    </div>
+
+                    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+                        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <KeyRound size={18} />
+                        </div>
+                        <h3 className="text-lg font-bold text-foreground">{"Key management"}</h3>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{"Use the Keys panel to add, change, and remove provider API keys from one place."}</p>
+                    </div>
+
+                    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+                        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <Wand2 size={18} />
+                        </div>
+                        <h3 className="text-lg font-bold text-foreground">{"Prompt enhancement"}</h3>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{"Use Jac’s by llm() flow to refine system prompts before sending them to your selected models."}</p>
+                    </div>
+                </div>
+            </section>
+
+            {showKeys and
+                <ApiKeyModal
+                    providers={providerCatalog["providers"]}
+                    onClose={closeKeys}
+                />
+            }
         </div>;
     }
 }

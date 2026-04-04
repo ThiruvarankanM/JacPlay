@@ -5,7 +5,8 @@ impl send_chat_message(
     messages: list,
     api_key: str,
     provider: str,
-    system_prompt: str
+    system_prompt: str,
+    enhance_prompt: bool = False
 ) -> dict {
     if not api_key or not api_key.strip() {
         return {
@@ -36,6 +37,28 @@ impl send_chat_message(
     }
 }
 
+impl build_system_prompt(system_prompt: str = "", messages: list = None, enhance: bool = False) -> dict {
+    safe_messages = messages or [];
+    base_prompt = system_prompt.strip();
+    if not enhance {
+        return {"ok": True, "data": {"system_prompt": base_prompt, "enhanced": False}};
+    }
+
+    seed = _safe_prompt_seed(safe_messages, base_prompt);
+    improved = enhance_system_prompt(seed).strip();
+    if not improved {
+        improved = base_prompt;
+    }
+    return {
+        "ok": True,
+        "data": {
+            "system_prompt": improved,
+            "enhanced": True,
+            "source": "by_llm"
+        }
+    };
+}
+
 impl validate_api_key(provider: str, api_key: str) -> dict {
     if not api_key or not api_key.strip() {
         return {"ok": False, "error": "API key cannot be empty"};
@@ -64,6 +87,56 @@ impl validate_api_key(provider: str, api_key: str) -> dict {
         return {"ok": True, "data": {"valid": True, "provider": provider}};
     }
     return {"ok": False, "error": result.get("error", "Invalid API key — check and try again.")};
+}
+
+def _safe_prompt_seed(messages: list, system_prompt: str) -> str {
+    preview = [];
+    recent = messages[-4:] if len(messages) > 4 else messages;
+    for msg in recent {
+        role = str(msg["role"]) if msg and "role" in msg else "user";
+        content = str(msg["content"]) if msg and "content" in msg else "";
+        content = content.strip();
+        if content {
+            preview.append(role + ": " + content[:500]);
+        }
+    }
+    seed = "Current system prompt:\n" + (system_prompt.strip() if system_prompt else "") + "\n\nRecent conversation:\n" + "\n".join(preview);
+    return seed[:4000];
+}
+
+def _stringify_content(value: any) -> str {
+    if value is None {
+        return "";
+    }
+    if isinstance(value, str) {
+        return value;
+    }
+    if isinstance(value, list) {
+        parts = [];
+        for item in value {
+            if isinstance(item, str) {
+                if item.strip() {
+                    parts.append(item);
+                }
+            } elif item and isinstance(item, dict) {
+                if item.get("text") and str(item.get("text")).strip() {
+                    parts.append(str(item.get("text")));
+                } elif item.get("content") and str(item.get("content")).strip() {
+                    parts.append(str(item.get("content")));
+                }
+            }
+        }
+        return "\n".join(parts);
+    }
+    if isinstance(value, dict) {
+        if value.get("text") and str(value.get("text")).strip() {
+            return str(value.get("text"));
+        }
+        if value.get("content") and str(value.get("content")).strip() {
+            return str(value.get("content"));
+        }
+    }
+    return str(value);
 }
 
 
@@ -119,7 +192,7 @@ def _call_openai_compatible(model_id: str, messages: list, api_key: str, base_ur
         return {"ok": False, "error": "No response from model.", "code": "EMPTY_RESPONSE"};
     }
 
-    content = choices[0].get("message", {}).get("content", "") or "";
+    content = _stringify_content(choices[0].get("message", {}).get("content", ""));
     usage = data.get("usage", {});
     return {
         "ok": True,
@@ -181,7 +254,7 @@ def _call_anthropic(model_id: str, messages: list, api_key: str, system_prompt: 
     }
 
     blocks = data.get("content", []);
-    content = blocks[0].get("text", "") if blocks else "";
+    content = _stringify_content(blocks);
     usage = data.get("usage", {});
     return {
         "ok": True,
@@ -248,7 +321,10 @@ def _call_google(model_id: str, messages: list, api_key: str, system_prompt: str
     }
 
     parts = candidates[0].get("content", {}).get("parts", []);
-    content = parts[0].get("text", "") if parts else "";
+    content = _stringify_content(parts);
+    if not content.strip() {
+        return {"ok": False, "error": "Google AI returned an empty message for this model.", "code": "EMPTY_RESPONSE", "details": candidates[0]};
+    }
     meta = data.get("usageMetadata", {});
     return {
         "ok": True,

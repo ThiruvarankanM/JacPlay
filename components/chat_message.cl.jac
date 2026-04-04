@@ -71,13 +71,13 @@ cl {
                             {copied and <Check size={11}/> or <Copy size={11}/>}
                         </button>
                     </div>
-                    {(msg["usage"] or msg["elapsed"]) and
+                    {((msg["usage"] and int(msg["usage"]["completion_tokens"] or 0) > 0) or (msg["elapsed"] and int(msg["elapsed"] or 0) > 0)) and
                         <span className="text-[11px] text-muted-foreground/50 px-1 self-start flex items-center gap-1.5 font-medium">
-                            {msg["usage"] and str(msg["usage"]["completion_tokens"]) + " tokens"}
-                            {msg["usage"] and msg["elapsed"] and
+                            {msg["usage"] and int(msg["usage"]["completion_tokens"] or 0) > 0 and str(msg["usage"]["completion_tokens"]) + " tokens"}
+                            {msg["usage"] and int(msg["usage"]["completion_tokens"] or 0) > 0 and msg["elapsed"] and int(msg["elapsed"] or 0) > 0 and
                                 <span className="opacity-60">{"·"}</span>
                             }
-                            {msg["elapsed"] and str(round(int(msg["elapsed"]) / 1000, 1)) + "s"}
+                            {msg["elapsed"] and int(msg["elapsed"] or 0) > 0 and str(round(int(msg["elapsed"]) / 1000, 1)) + "s"}
                         </span>
                     }
                 </div>

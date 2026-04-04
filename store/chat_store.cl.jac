@@ -1,23 +1,19 @@
-"""Chat store — manages chat sessions (one per active model tab)."""
-
-cl import from "react" { createContext, useContext, useRef }
+cl import from "react" { createContext, useContext }
+import from ..hooks.chat_api { sendChatMessage }
 
 glob ChatCtx: Any = createContext(None);
 
 def:pub ChatProvider(props: Any) -> JsxElement {
-    has sessions: Any = [];        # array of session objects
-    has activeTabId: str = "";     # currently visible tab
-    has systemPrompt: str = "";    # shared system prompt
-    has inputText: str = "";       # current message draft
-    has useFunctionApi: bool = False;  # runtime compatibility switch for API routing
-
-    # Ref always points to the latest sessions — used inside async callbacks
-    # to avoid stale closure where `sessions` reads the render-time snapshot.
-    sessionsRef = useRef([]);
-    sessionsRef["current"] = sessions;
+    has sessions: Any = [];
+    has activeTabId: str = "";
+    has systemPrompt: str = "";
+    has inputText: str = "";
+    has shouldEnhancePrompt: bool = False;
+    has requestTick: int = 0;
 
     def _makeId -> str {
-        return "s_" + str(Date.now()) + "_" + str(Math.floor(Math.random() * 10000));
+        requestTick = requestTick + 1;
+        return "s_" + str(requestTick);
     }
 
     def addSession(model: Any) -> str {
@@ -29,198 +25,134 @@ def:pub ChatProvider(props: Any) -> JsxElement {
             "isLoading": False,
             "error": None,
             "tokenUsage": None,
-            "totalTokens": 0
+            "totalTokens": 0,
+            "promptMeta": {"enhanced": False}
         };
-        sessions = sessions.concat([newSession]);
+        sessions = sessions + [newSession];
         activeTabId = id;
         return id;
     }
 
-    def removeSession(sessionId: str) -> None {
-        remaining = sessions.filter(lambda(s: Any) -> bool { return s["id"] != sessionId; });
+    def removeSession(sessionId: str) {
+        remaining = [s for s in sessions if s and s["id"] != sessionId];
         sessions = remaining;
         if activeTabId == sessionId {
-            if remaining.length > 0 {
-                activeTabId = remaining[remaining.length - 1]["id"];
-            } else {
-                activeTabId = "";
-            }
+            activeTabId = remaining[-1]["id"] if remaining else "";
         }
     }
 
-    def setActiveTab(sessionId: str) -> None {
+    def setActiveTab(sessionId: str) {
         activeTabId = sessionId;
     }
 
-    def clearSession(sessionId: str) -> None {
-        sessions = sessions.map(lambda(s: Any) -> Any {
-            if s["id"] == sessionId {
-                return {
+    def clearSession(sessionId: str) {
+        next_sessions = [];
+        for s in sessions {
+            if s and s["id"] == sessionId {
+                next_sessions.append({
                     "id": s["id"],
                     "model": s["model"],
                     "messages": [],
                     "isLoading": False,
                     "error": None,
                     "tokenUsage": None,
-                    "totalTokens": 0
-                };
+                    "totalTokens": 0,
+                    "promptMeta": {"enhanced": False}
+                });
+            } else {
+                next_sessions.append(s);
             }
-            return s;
-        });
+        }
+        sessions = next_sessions;
     }
 
-    def updateSystemPrompt(prompt: str) -> None {
+    def updateSystemPrompt(prompt: str) {
         systemPrompt = prompt;
     }
 
-    def updateInputText(text: str) -> None {
+    def updateInputText(text: str) {
         inputText = text;
     }
 
-    def sendMessage(content: str, apiKeyGetter: Any) -> None {
-        if sessions.length == 0 { return; }
-        if not content.trim() { return; }
+    def updateEnhancePrompt(enabled: bool) {
+        shouldEnhancePrompt = enabled;
+    }
 
-        trimmed = content.trim();
+    async def sendMessage(content: str, apiKeyGetter: Any) {
+        if not sessions or not content.strip() { return; }
 
-        # Add user message to all sessions & mark loading
-        # Store in local var first — sessions setState is async so we need
-        # the updated list immediately for the fetch calls below.
-        updatedSessions = sessions.map(lambda(s: Any) -> Any {
-            updatedMessages = s["messages"].concat([{
+        trimmed = content.strip();
+        updated_sessions = [];
+        for s in sessions {
+            updated_messages = (s["messages"] or []) + [{
                 "role": "user",
                 "content": trimmed,
                 "id": _makeId()
-            }]);
-            return {
+            }];
+            updated_sessions.append({
                 "id": s["id"],
                 "model": s["model"],
-                "messages": updatedMessages,
+                "messages": updated_messages,
                 "isLoading": True,
                 "error": None,
                 "tokenUsage": s["tokenUsage"],
-                "totalTokens": s["totalTokens"] or 0
-            };
-        });
-        sessions = updatedSessions;
-
+                "totalTokens": s["totalTokens"] or 0,
+                "promptMeta": s["promptMeta"] or {"enhanced": False}
+            });
+        }
+        sessions = updated_sessions;
         inputText = "";
 
-        # Fire async call per session (fire-and-forget for parallelism)
-        updatedSessions.forEach(lambda(sess: Any) -> None {
-            model = sess["model"];
-            provider = model["provider"] or "openai";
-            apiKey = apiKeyGetter(provider);
+        final_sessions = [];
+        for sess in updated_sessions {
+            model = sess["model"] or {};
+            provider = model["provider"] if model and "provider" in model else "openai";
+            api_key = apiKeyGetter(provider);
+            started_at = Date.now();
+            result = await sendChatMessage(
+                model["id"] if model and "id" in model else "",
+                sess["messages"],
+                api_key,
+                provider,
+                systemPrompt,
+                shouldEnhancePrompt
+            );
+            elapsed_ms = int(Date.now() - started_at);
 
-            # Build message array including system prompt
-            msgList = [];
-            if systemPrompt and systemPrompt.trim() {
-                msgList = msgList.concat([{"role": "system", "content": systemPrompt.trim()}]);
-            }
-            msgList = msgList.concat(sess["messages"]);
-
-            sessId = sess["id"];
-
-            async def _requestChat(reqBody: Any) -> Any {
-                if useFunctionApi {
-                    fnResp = await fetch("/function/api_chat", {
-                        "method": "POST",
-                        "headers": {"Content-Type": "application/json"},
-                        "body": JSON.stringify(reqBody)
-                    });
-                    return await fnResp.json();
-                }
-
-                respObj = await fetch("/api/chat", {
-                    "method": "POST",
-                    "headers": {"Content-Type": "application/json"},
-                    "body": JSON.stringify(reqBody)
+            if result and result["ok"] {
+                payload = result["data"] or {};
+                usage = payload["usage"] or None;
+                added_tokens = int(usage["total_tokens"]) if usage and "total_tokens" in usage else 0;
+                final_sessions.append({
+                    "id": sess["id"],
+                    "model": sess["model"],
+                    "messages": sess["messages"] + [{
+                        "role": "assistant",
+                        "content": payload["content"] if payload and "content" in payload else "",
+                        "id": _makeId(),
+                        "usage": usage,
+                        "elapsed": elapsed_ms
+                    }],
+                    "isLoading": False,
+                    "error": None,
+                    "tokenUsage": usage,
+                    "totalTokens": int(sess["totalTokens"] or 0) + added_tokens,
+                    "promptMeta": payload["prompt_meta"] if payload and "prompt_meta" in payload else {"enhanced": False}
                 });
-
-                statusCode = int(respObj["status"] or 0);
-                if statusCode == 404 {
-                    useFunctionApi = True;
-                    fnResp = await fetch("/function/api_chat", {
-                        "method": "POST",
-                        "headers": {"Content-Type": "application/json"},
-                        "body": JSON.stringify(reqBody)
-                    });
-                    return await fnResp.json();
-                }
-
-                contentType = str(respObj["headers"].get("content-type") or "").toLowerCase();
-                if contentType.indexOf("application/json") >= 0 {
-                    return await respObj.json();
-                }
-
-                # Jac runtime fallback: switch once, then keep using function route.
-                useFunctionApi = True;
-                fnResp = await fetch("/function/api_chat", {
-                    "method": "POST",
-                    "headers": {"Content-Type": "application/json"},
-                    "body": JSON.stringify(reqBody)
+            } else {
+                final_sessions.append({
+                    "id": sess["id"],
+                    "model": sess["model"],
+                    "messages": sess["messages"],
+                    "isLoading": False,
+                    "error": result["error"] if result and "error" in result else "Failed to get response from model.",
+                    "tokenUsage": None,
+                    "totalTokens": sess["totalTokens"] or 0,
+                    "promptMeta": sess["promptMeta"] or {"enhanced": False}
                 });
-                return await fnResp.json();
             }
-
-            async def _doFetch -> None {
-                startTime = int(Date.now());
-                reqBody = {
-                    "model_id": model["id"],
-                    "messages": msgList,
-                    "api_key": apiKey,
-                    "provider": provider,
-                    "system_prompt": ""
-                };
-                respJson = await _requestChat(reqBody);
-                result = respJson["data"] and respJson["data"]["result"] or respJson["data"] or respJson;
-
-                elapsed = int(Date.now()) - startTime;
-                if result["ok"] {
-                    assistantContent = result["data"]["content"] or "";
-                    usage = result["data"]["usage"] or None;
-                    sessions = sessionsRef["current"].map(lambda(s: Any) -> Any {
-                        if s["id"] == sessId {
-                            msgs = s["messages"].concat([{
-                                "role": "assistant",
-                                "content": assistantContent,
-                                "id": _makeId(),
-                                "usage": usage,
-                                "elapsed": elapsed
-                            }]);
-                            prevTotal = s["totalTokens"] or 0;
-                            addedTokens = usage and usage["total_tokens"] or 0;
-                            return {
-                                "id": s["id"],
-                                "model": s["model"],
-                                "messages": msgs,
-                                "isLoading": False,
-                                "error": None,
-                                "tokenUsage": usage,
-                                "totalTokens": int(prevTotal) + int(addedTokens)
-                            };
-                        }
-                        return s;
-                    });
-                } else {
-                    errMsg = result["error"] or "Failed to get response from model.";
-                    sessions = sessionsRef["current"].map(lambda(s: Any) -> Any {
-                        if s["id"] == sessId {
-                            return {
-                                "id": s["id"],
-                                "model": s["model"],
-                                "messages": s["messages"],
-                                "isLoading": False,
-                                "error": errMsg,
-                                "tokenUsage": None
-                            };
-                        }
-                        return s;
-                    });
-                }
-            }
-            _doFetch();
-        });
+        }
+        sessions = final_sessions;
     }
 
     store = {
@@ -228,12 +160,14 @@ def:pub ChatProvider(props: Any) -> JsxElement {
         "activeTabId": activeTabId,
         "systemPrompt": systemPrompt,
         "inputText": inputText,
+        "enhancePrompt": shouldEnhancePrompt,
         "addSession": addSession,
         "removeSession": removeSession,
         "setActiveTab": setActiveTab,
         "clearSession": clearSession,
         "updateSystemPrompt": updateSystemPrompt,
         "updateInputText": updateInputText,
+        "setEnhancePrompt": updateEnhancePrompt,
         "sendMessage": sendMessage
     };
 
