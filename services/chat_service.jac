@@ -1,15 +1,172 @@
-"""Chat service interface — send messages to AI models."""
+import from byllm.lib { Model }
+import from services.provider_catalog { get_provider }
+import from requests { post }
 
-def:pub send_chat_message(
-    model_id: str,
-    messages: list,
-    api_key: str,
-    provider: str,
-    system_prompt: str,
-    enhance_prompt: bool = False
-) -> dict;
+glob llm: Model = Model(model_name="openai/gpt-4o-mini");
 
-def:pub validate_api_key(provider: str, api_key: str) -> dict;
+glob _MODEL_PRICING: dict = {
+    "gpt-4o": {"input": 5.0, "output": 15.0},
+    "gpt-4o-mini": {"input": 0.15, "output": 0.6},
+    "gpt-4.1": {"input": 2.0, "output": 8.0},
+    "o4-mini": {"input": 1.1, "output": 4.4},
+    "o3-mini": {"input": 1.1, "output": 4.4},
+    "claude-opus-4-6": {"input": 15.0, "output": 75.0},
+    "claude-sonnet-4-6": {"input": 3.0, "output": 15.0},
+    "claude-haiku-4-5-20251001": {"input": 0.8, "output": 4.0},
+    "gemini-2.5-pro-preview": {"input": 1.25, "output": 10.0},
+    "gemini-2.5-flash-preview": {"input": 0.3, "output": 2.5},
+    "gemini-2.0-flash-001": {"input": 0.1, "output": 0.4},
+    "deepseek-reasoner": {"input": 0.55, "output": 2.19},
+    "deepseek-chat": {"input": 0.27, "output": 1.1},
+    "mistral-large-latest": {"input": 2.0, "output": 6.0},
+    "mistral-small-latest": {"input": 0.2, "output": 0.6},
+    "codestral-latest": {"input": 0.3, "output": 0.9},
+    "llama-3.3-70b-versatile": {"input": 0.59, "output": 0.79},
+    "llama-3.1-8b-instant": {"input": 0.05, "output": 0.08},
+    "command-r-plus": {"input": 3.0, "output": 15.0}
+};
+
+sem enhance_system_prompt = """You improve chat system prompts for a general-purpose assistant.
+Return only the improved system prompt text.
+Keep it concise, safe, and broadly useful.
+Do not mention hidden policies, chain-of-thought, or internal reasoning.
+If the input is already good, lightly refine it.
+""";
+
+def enhance_system_prompt(prompt_seed: str) -> str by llm(
+    temperature=0.2,
+    reason="Generate a concise, safe, reusable system prompt for a chat assistant based on the provided context."
+);
+
+def _normalize_messages(messages: list, system_prompt: str) -> list {
+    full_messages: list = [];
+    if system_prompt and system_prompt.strip() {
+        full_messages.append({"role": "system", "content": system_prompt.strip()});
+    }
+    for msg in messages {
+        role = str(msg["role"]) if msg and "role" in msg else "user";
+        content = str(msg["content"]) if msg and "content" in msg else "";
+        if content.strip() {
+            full_messages.append({"role": role, "content": content});
+        }
+    }
+    return full_messages;
+}
+
+def _stringify_content(value: Any) -> str {
+    if value == None {
+        return "";
+    }
+    if isinstance(value, str) {
+        return value;
+    }
+    if isinstance(value, list) {
+        parts: list[str] = [];
+        for item in value {
+            if isinstance(item, str) {
+                if item.strip() {
+                    parts.append(item);
+                }
+            } elif item and isinstance(item, dict) {
+                if "type" in item and str(item["type"]) == "text" and "text" in item and str(item["text"]).strip() {
+                    parts.append(str(item["text"]));
+                } elif "text" in item and str(item["text"]).strip() {
+                    parts.append(str(item["text"]));
+                } elif "content" in item and str(item["content"]).strip() {
+                    parts.append(str(item["content"]));
+                } elif "parts" in item and item["parts"] {
+                    nested = _stringify_content(item["parts"]);
+                    if nested.strip() {
+                        parts.append(nested);
+                    }
+                } elif "message" in item and item["message"] {
+                    nested = _stringify_content(item["message"]);
+                    if nested.strip() {
+                        parts.append(nested);
+                    }
+                }
+            }
+        }
+        return "\n".join(parts);
+    }
+    if isinstance(value, dict) {
+        if "type" in value and str(value["type"]) == "text" and "text" in value and str(value["text"]).strip() {
+            return str(value["text"]);
+        }
+        if "text" in value and str(value["text"]).strip() {
+            return str(value["text"]);
+        }
+        if "content" in value and value["content"] != None {
+            nested = _stringify_content(value["content"]);
+            if nested.strip() {
+                return nested;
+            }
+        }
+        if "parts" in value and value["parts"] {
+            nested = _stringify_content(value["parts"]);
+            if nested.strip() {
+                return nested;
+            }
+        }
+        if "message" in value and value["message"] {
+            nested = _stringify_content(value["message"]);
+            if nested.strip() {
+                return nested;
+            }
+        }
+        if "output_text" in value and str(value["output_text"]).strip() {
+            return str(value["output_text"]);
+        }
+    }
+    return str(value);
+}
+
+def _safe_prompt_seed(messages: list, system_prompt: str) -> str {
+    preview: list[str] = [];
+    recent = messages[-4:] if len(messages) > 4 else messages;
+    for msg in recent {
+        role = str(msg["role"]) if msg and "role" in msg else "user";
+        content = str(msg["content"]) if msg and "content" in msg else "";
+        content = content.strip();
+        if content {
+            preview.append(role + ": " + content[:500]);
+        }
+    }
+    seed = "Current system prompt:\n" + (system_prompt.strip() if system_prompt else "") + "\n\nRecent conversation:\n" + "\n".join(preview);
+    return seed[:4000];
+}
+
+def _estimate_cost(model_id: str, usage: dict) -> dict {
+    pricing = _MODEL_PRICING[model_id] if model_id in _MODEL_PRICING else {"input": 0.0, "output": 0.0};
+    prompt_tokens = int(usage["prompt_tokens"]) if usage and "prompt_tokens" in usage else 0;
+    completion_tokens = int(usage["completion_tokens"]) if usage and "completion_tokens" in usage else 0;
+    input_rate = float(pricing["input"]) if pricing and "input" in pricing else 0.0;
+    output_rate = float(pricing["output"]) if pricing and "output" in pricing else 0.0;
+    estimated = ((prompt_tokens / 1000000.0) * input_rate) + ((completion_tokens / 1000000.0) * output_rate);
+    return {
+        "input_cost_per_million": input_rate,
+        "output_cost_per_million": output_rate,
+        "estimated_cost_usd": round(estimated, 6)
+    };
+}
+
+def _with_metrics(result: dict, model_id: str, provider: str, latency_ms: int) -> dict {
+    if not result or not result["ok"] or not result["data"] {
+        return result;
+    }
+    usage = result["data"]["usage"] if "usage" in result["data"] else {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0};
+    result["data"]["usage"] = {
+        "prompt_tokens": int(usage["prompt_tokens"]) if usage and "prompt_tokens" in usage else 0,
+        "completion_tokens": int(usage["completion_tokens"]) if usage and "completion_tokens" in usage else 0,
+        "total_tokens": int(usage["total_tokens"]) if usage and "total_tokens" in usage else 0
+    };
+    result["data"]["metrics"] = {
+        "latency_ms": latency_ms,
+        **_estimate_cost(model_id, result["data"]["usage"])
+    };
+    result["data"]["provider"] = provider;
+    return result;
+}
 
 def:pub build_system_prompt(system_prompt: str = "", messages: list = None, enhance: bool = False) -> dict {
     safe_messages = messages or [];
@@ -33,70 +190,102 @@ def:pub build_system_prompt(system_prompt: str = "", messages: list = None, enha
     };
 }
 
-import from services.provider_catalog { get_provider }
-import from requests { post }
-import from byllm.lib { Model }
+def:pub send_chat_message(
+    model_id: str,
+    messages: list,
+    api_key: str,
+    provider: str,
+    system_prompt: str,
+    enhance_prompt: bool = False
+) -> dict {
+    if not api_key or not api_key.strip() {
+        provider_meta = get_provider(provider);
+        return {
+            "ok": False,
+            "error": "No API key provided. Add your " + str(provider_meta["name"]) + " key via the Keys panel.",
+            "code": "MISSING_KEY"
+        };
+    }
 
-glob llm: Model = Model(model_name="openai/gpt-4o-mini");
-
-sem enhance_system_prompt = """You improve chat system prompts for a general-purpose assistant.
-Return only the improved system prompt text.
-Keep it concise, safe, and broadly useful.
-Do not mention hidden policies, chain-of-thought, or internal reasoning.
-If the input is already good, lightly refine it.
-""";
-
-def enhance_system_prompt(prompt_seed: str) -> str by llm(
-    temperature=0.2,
-    reason="Generate a concise, safe, reusable system prompt for a chat assistant based on the provided context."
-);
-
-def _safe_prompt_seed(messages: list, system_prompt: str) -> str {
-    preview: list[str] = [];
-    recent = messages[-4:] if len(messages) > 4 else messages;
-    for msg in recent {
-        role = str(msg["role"]) if msg and "role" in msg else "user";
-        content = str(msg["content"]) if msg and "content" in msg else "";
-        content = content.strip();
-        if content {
-            preview.append(role + ": " + content[:500]);
+    final_prompt = system_prompt;
+    prompt_meta = {"enhanced": False};
+    if enhance_prompt {
+        prompt_result = build_system_prompt(system_prompt, messages, True);
+        if prompt_result and prompt_result["ok"] and prompt_result["data"] {
+            final_prompt = str(prompt_result["data"]["system_prompt"]);
+            prompt_meta = prompt_result["data"];
         }
     }
-    seed = "Current system prompt:\n" + (system_prompt.strip() if system_prompt else "") + "\n\nRecent conversation:\n" + "\n".join(preview);
-    return seed[:4000];
+
+    key = api_key.strip();
+    started_at = Date.now();
+    result = {"ok": False, "error": "Unknown provider", "code": "UNKNOWN_PROVIDER"};
+    if provider == "anthropic" {
+        result = _call_anthropic(model_id, messages, key, final_prompt);
+    } elif provider == "google" {
+        result = _call_google(model_id, messages, key, final_prompt);
+    } else {
+        provider_meta = get_provider(provider);
+        base_url = str(provider_meta["chat_url"]) if provider_meta and "chat_url" in provider_meta else "";
+        if not base_url {
+            return {"ok": False, "error": "Unknown provider: " + provider, "code": "UNKNOWN_PROVIDER"};
+        }
+        result = _call_openai_compatible(model_id, messages, key, base_url, final_prompt);
+    }
+    latency_ms = int(Date.now() - started_at);
+    result = _with_metrics(result, model_id, provider, latency_ms);
+
+    if result and result["ok"] and result["data"] {
+        result["data"]["system_prompt"] = final_prompt;
+        result["data"]["prompt_meta"] = prompt_meta;
+    }
+    return result;
 }
 
-def _stringify_content(value: Any) -> str {
-    if value == None {
-        return "";
+def:pub validate_api_key(provider: str, api_key: str) -> dict {
+    key = api_key.strip() if api_key else "";
+    if not key {
+        return {"ok": False, "error": "API key cannot be empty"};
     }
-    if isinstance(value, str) {
-        return value;
+
+    provider_meta = get_provider(provider);
+    test_model = str(provider_meta["validation_model"]) if provider_meta and "validation_model" in provider_meta else "";
+    if not test_model {
+        return {"ok": False, "error": "Cannot validate unknown provider: " + provider};
     }
-    if isinstance(value, list) {
-        parts: list[str] = [];
-        for item in value {
-            if isinstance(item, str) {
-                if item.strip() {
-                    parts.append(item);
-                }
-            } elif item and isinstance(item, dict) {
-                if "text" in item and str(item["text"]).strip() {
-                    parts.append(str(item["text"]));
-                } elif "content" in item and str(item["content"]).strip() {
-                    parts.append(str(item["content"]));
-                }
-            }
+
+    result = send_chat_message(test_model, [{"role": "user", "content": "hi"}], key, provider, "", False);
+    if result and result["ok"] {
+        return {"ok": True, "data": {"valid": True, "provider": provider, "mode": "live"}};
+    }
+
+    err = str(result["error"]) if result and "error" in result else "";
+    status = int(result["status"]) if result and "status" in result else 0;
+    lower_err = err.lower();
+
+    auth_failed = (
+        status == 401 or
+        status == 403 or
+        "invalid api key" in lower_err or
+        "incorrect api key" in lower_err or
+        "authentication" in lower_err or
+        "unauthorized" in lower_err or
+        "invalid x-api-key" in lower_err or
+        "api key not valid" in lower_err or
+        "permission denied" in lower_err
+    );
+
+    if auth_failed {
+        return {"ok": False, "error": err or "Invalid API key. Check and try again.", "code": "INVALID_KEY"};
+    }
+
+    return {
+        "ok": True,
+        "data": {
+            "valid": True,
+            "provider": provider,
+            "mode": "format_only",
+            "warning": err or "Key format looks valid, but live verification could not be completed right now."
         }
-        return "\n".join(parts);
-    }
-    if isinstance(value, dict) {
-        if "text" in value and str(value["text"]).strip() {
-            return str(value["text"]);
-        }
-        if "content" in value and str(value["content"]).strip() {
-            return str(value["content"]);
-        }
-    }
-    return str(value);
+    };
 }

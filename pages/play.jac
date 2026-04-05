@@ -343,6 +343,7 @@ cl {
 
         def handleModelSelect(model: Any) -> None {
             provider = model["provider"] or "openai";
+            closePicker();
             if not appStore["hasKey"](provider) {
                 pendingModel = model;
                 quickKeyProvider = providerCatalog["getProviderById"](provider);
@@ -374,8 +375,7 @@ cl {
         }
 
         def closeAllSessions -> None {
-            ids = sessions.map(lambda(s: Any) -> str { return s["id"]; });
-            ids.forEach(chatStore["removeSession"]);
+            chatStore["clearAllSessions"]();
         }
 
         sessions = chatStore["sessions"];
@@ -426,6 +426,8 @@ cl {
                         <ChatPanel
                             session={sessions[0]}
                             onClear={lambda() -> None { chatStore["clearSession"](sessions[0]["id"]); }}
+                            onRegenerate={lambda() -> None { chatStore["regenerateSession"](sessions[0]["id"], appStore["getKey"]); }}
+                            onEditMessage={lambda(messageId: str, content: str) -> None { chatStore["editAndResend"](sessions[0]["id"], messageId, content, appStore["getKey"]); }}
                         />
                     </div>
                 }
@@ -444,6 +446,8 @@ cl {
                                 <ChatPanel
                                     session={sess}
                                     onClear={lambda() -> None { chatStore["clearSession"](sess["id"]); }}
+                                    onRegenerate={lambda() -> None { chatStore["regenerateSession"](sess["id"], appStore["getKey"]); }}
+                                    onEditMessage={lambda(messageId: str, content: str) -> None { chatStore["editAndResend"](sess["id"], messageId, content, appStore["getKey"]); }}
                                 />
                             </div>;
                         })}

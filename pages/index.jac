@@ -65,6 +65,9 @@ cl {
         }
 
         def openGithub -> None {
+            if typeof(window) == "undefined" or not window.open {
+                return;
+            }
             window.open("https://github.com", "_blank", "noopener,noreferrer");
         }
 

@@ -1,22 +1,23 @@
-# JacPlay progress
-
+# Project: JacPlay
+## Status: DONE
 ## Plan
-1. Repair shared app store so homepage and play page read/write the same API key and theme state.
-2. Add API key validation flow in the key modal and quick prompt using `validate_api_key`.
-3. Verify key rows support save, change, and remove after successful validation.
-4. Start the app and browser-validate the UI, then do a focused modal interaction check.
-
-## Files touched
-- `store/app_store.cl.jac`
-- `components/api_key_modal.cl.jac`
-
-## Issues / constraints
-- Must avoid `.jac/` compiled output.
-- Jac frontend tooling blocks direct React imports, so the app store was repaired using Jac client state patterns instead of React context.
-- Existing `chat_store.cl.jac` still uses direct React imports, but this task is focused on app store/key management unless build validation forces broader fixes.
-
+1. [x] Audit source for critical bugs, dead code, and duplicate legacy files.
+2. [x] Fix prompt enhancement, browser API guards, and brittle page logic.
+3. [x] Remove unused legacy backend/route files and simplify endpoint registration.
+4. [x] Validate Jac syntax/types, run app, and verify browser render.
+## Files
+- `main.jac` — kept endpoint registration clean and aligned with active service modules.
+- `pages/play.jac` — fixed prompt enhancement input and session cleanup logic.
+- `components/chat_message.cl.jac` — safer copy flow, safer markdown rendering, fixed edit input event access.
+- `pages/index.jac` — guarded browser-only window usage.
+- `services/chat_service.jac` / `services/model_registry.jac` — reduced to active compatibility facades only.
+## Issues
+- Prompt enhancement was receiving session objects instead of message objects.
+- Legacy impl files and duplicate not-found route were dead code and removed.
+- Client code used unguarded browser globals (`navigator`, `window`, `setTimeout`).
 ## Learnings
-- Jac docs require `jac_docs()` before code changes because older React-style patterns are often invalid.
-- Shared client state can be exposed through a module-level `glob` updated by a provider component when React context is unavailable.
-- `sv import` validation calls from `.cl.jac` should use positional args and async handlers.
-- Store functions returned from `useAppStore()` are safest to access with dict indexing (`store["setApiKey"]`) for consistency across pages/components.
+- Keep one active backend surface and remove stale impl files quickly to avoid drift.
+- Guard browser APIs in Jac client code to prevent blank-page/runtime failures.
+- Sanitizing model output before markdown rendering is a safer default.
+## Last Action
+Validated syntax, restarted the app, and confirmed `/play` renders successfully at `http://127.0.0.1:8001/play`.

@@ -74,7 +74,7 @@ cl {
                         <input
                             type={showKey and "text" or "password"}
                             value={inputVal}
-                            onChange={lambda(e: Any) -> None { inputVal = str(e["target"]["value"]); error = ""; success = ""; }}
+                            onChange={lambda(e: Any) -> None { inputVal = str(e.target.value); error = ""; success = ""; }}
                             onKeyDown={handleKeyDown}
                             placeholder={provider["key_placeholder"] or "Paste your API key here"}
                             className={cn(
@@ -260,7 +260,7 @@ cl {
                             <input
                                 type={showKey and "text" or "password"}
                                 value={inputVal}
-                                onChange={lambda(e: Any) -> None { inputVal = str(e["target"]["value"]); error = ""; success = ""; }}
+                                onChange={lambda(e: Any) -> None { inputVal = str(e.target.value); error = ""; success = ""; }}
                                 onKeyDown={handleKeyDown}
                                 placeholder={provider["key_placeholder"]}
                                 className={cn(
